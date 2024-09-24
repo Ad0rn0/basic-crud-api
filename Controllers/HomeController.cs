@@ -9,64 +9,73 @@ namespace Todo.Controllers
 	public class HomeController : ControllerBase
 	{
 		[HttpGet("/")]
-		public List<TodoModel> Get(
-			[FromServices] AppDbContext dbContext
-		)
-		{
-			return dbContext.Todos.ToList();
-		}
+		public async Task<IActionResult> GetAllAsync([FromServices] AppDbContext dbContext)
+			 => Ok(await dbContext.Todos.ToListAsync());
 
 		[HttpPost("/")]
-		public TodoModel Post(
+		public async Task<IActionResult> PostAsync(
 			[FromBody] TodoModel todo,
 			[FromServices] AppDbContext dbContext
 		)
 		{
 			dbContext.Todos.Add(todo);
-			dbContext.SaveChanges();
+			await dbContext.SaveChangesAsync();
 
-			return todo;
+			return Created($"/{todo.Id}", todo);
 		}
 
 		[HttpGet("/{id:int}")]
-		public TodoModel GetById(
+		public async Task<IActionResult> GetByIdAsync(
 			[FromRoute] int id,
 			[FromServices] AppDbContext context)
 		{
-			var todo = context.Todos.FirstOrDefault(t => t.Id == id);
-			return todo;
+			var todo = await context.Todos.FirstOrDefaultAsync(t => t.Id == id);
+
+			if (todo == null)
+			{
+				return NotFound($"Id {id} não encontrado.");
+			}
+
+			return Ok(todo);
 		}
 
 		[HttpPut("/{id:int}")]
-		public TodoModel Put(
+		public async Task<IActionResult> PutAsync(
 			[FromRoute] int id,
 			[FromBody] TodoModel todo,
 			[FromServices] AppDbContext context)
 		{
-			var todoToUpdate = context.Todos.FirstOrDefault(t => t.Id == id);
+			var todoToUpdate = await context.Todos.FirstOrDefaultAsync(t => t.Id == id);
+
+			if (todoToUpdate == null)
+			{
+				return NotFound($"Id {id} não encontrado");
+			}
 
 			todoToUpdate.Title = todo.Title;
 			todoToUpdate.Done = todo.Done;
-			todoToUpdate.CreatedAt = todo.CreatedAt;
 
-			context.Update(todoToUpdate);
+			context.Todos.Update(todoToUpdate);
 			context.SaveChanges();
 
-			return todoToUpdate;
+			return Ok(todoToUpdate);
 		}
 
 		[HttpDelete("/{id:int}")]
-		public TodoModel Delete(
+		public async Task<IActionResult> Delete(
 			[FromRoute] int id,
 			[FromServices] AppDbContext context
 		)
 		{
-			var todo = context.Todos.FirstOrDefault(t => t.Id == id);
+			var todo = await context.Todos.FirstOrDefaultAsync(t => t.Id == id);
 
-			context.Remove(todo);
+			if (todo == null)
+				return NotFound($"Id {id} não encontrado.");
+
+			context.Todos.Remove(todo);
 			context.SaveChanges();
 
-			return todo;
+			return Ok(todo);
 		}
 	}
 }
